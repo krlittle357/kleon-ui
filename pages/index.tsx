@@ -1,17 +1,33 @@
 import Head from 'next/head'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { Keypair } from '@solana/web3.js'
 
 export default function Home() {
   const [token, setToken] = useState('')
   const [amount, setAmount] = useState('')
   const [status, setStatus] = useState('')
+  const [wallet, setWallet] = useState<Keypair | null>(null)
+
+  useEffect(() => {
+    // Auto-generate a wallet on load
+    const newWallet = Keypair.generate()
+    setWallet(newWallet)
+  }, [])
 
   const handleTrade = async (type: 'buy' | 'sell') => {
+    if (!wallet) return setStatus('No wallet loaded')
     setStatus('Sending...')
-    // Placeholder logic, replace with real API call later
-    setTimeout(() => {
-      setStatus(`${type.toUpperCase()} ${amount} of ${token} complete ✅`)
-    }, 1000)
+
+    try {
+      const res = await fetch(`/api/${type}`, {
+        method: 'POST',
+        body: JSON.stringify({ token, amount }),
+      })
+      const data = await res.json()
+      setStatus(data.message || 'Trade complete')
+    } catch (err) {
+      setStatus('Trade failed')
+    }
   }
 
   return (
@@ -30,20 +46,12 @@ export default function Home() {
         </nav>
       </header>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gray-800 p-4 rounded">
-          <h2 className="text-lg font-semibold">Total Wallets</h2>
-          <p className="text-2xl">12</p>
-        </div>
-        <div className="bg-gray-800 p-4 rounded">
-          <h2 className="text-lg font-semibold">Total Balance</h2>
-          <p className="text-2xl">37.5 SOL</p>
-        </div>
-        <div className="bg-gray-800 p-4 rounded">
-          <h2 className="text-lg font-semibold">Top Coin</h2>
-          <p className="text-2xl">$KLEON</p>
-        </div>
-      </section>
+      {wallet && (
+        <section className="bg-gray-800 p-4 rounded">
+          <h2 className="text-lg font-semibold">Wallet Address</h2>
+          <p className="text-sm break-all">{wallet.publicKey.toBase58()}</p>
+        </section>
+      )}
 
       <section className="bg-gray-900 p-6 rounded-lg space-y-4">
         <h2 className="text-xl font-bold">Trade Panel</h2>
